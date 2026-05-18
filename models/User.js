@@ -54,6 +54,11 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
       select: false, // Don't return password by default
     },
+    transactionPassword: {
+      type: String,
+      minlength: 6,
+      select: false,
+    },
     aadharNo: {
       type: String,
       trim: true,
@@ -205,12 +210,22 @@ userSchema.pre('save', async function (next) {
   }
 
   if (!this.isModified('password')) {
-    return next();
+    if (!this.isModified('transactionPassword')) {
+      return next();
+    }
   }
 
   try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+    if (this.isModified('password') && this.password) {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
+
+    if (this.isModified('transactionPassword') && this.transactionPassword) {
+      const salt = await bcrypt.genSalt(10);
+      this.transactionPassword = await bcrypt.hash(this.transactionPassword, salt);
+    }
+
     next();
   } catch (error) {
     next(error);
@@ -224,6 +239,14 @@ userSchema.pre('save', async function (next) {
  */
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+userSchema.methods.matchTransactionPassword = async function (enteredPassword) {
+  if (!this.transactionPassword) {
+    return false;
+  }
+
+  return await bcrypt.compare(enteredPassword, this.transactionPassword);
 };
 
 module.exports = mongoose.model('User', userSchema);

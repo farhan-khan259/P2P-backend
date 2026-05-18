@@ -5,6 +5,7 @@ const {
   updateBankDetails,
   updatePaymentDetails,
   updateNomineeDetails,
+  updateTransactionPassword,
   changePassword,
 } = require('../controllers/profileController');
 const { protect } = require('../middleware/auth');
@@ -25,6 +26,9 @@ router.put('/bank-details', updateBankDetails);
 
 // Update payment details
 router.put('/payment-details', updatePaymentDetails);
+
+// Update transaction password
+router.put('/transaction-password', updateTransactionPassword);
 
 // Update nominee details
 router.put('/nominee-details', updateNomineeDetails);

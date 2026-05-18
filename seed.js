@@ -3,6 +3,8 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 const User = require('./models/User');
+const Product = require('./models/Product');
+const productSeedData = require('./data/productSeedData');
 
 /**
  * Seed database with admin user
@@ -35,6 +37,18 @@ const seedAdmin = async () => {
   }
 };
 
+const seedProducts = async () => {
+  const existingCount = await Product.countDocuments();
+
+  if (existingCount > 0) {
+    console.log('✓ Product catalog already exists');
+    return;
+  }
+
+  await Product.insertMany(productSeedData);
+  console.log(`✓ Seeded ${productSeedData.length} products`);
+};
+
 /**
  * Standalone seed execution (when running via npm run seed)
  */
@@ -47,6 +61,7 @@ const runSeed = async () => {
     console.log('✓ Connected to MongoDB');
 
     await seedAdmin();
+    await seedProducts();
 
     await mongoose.connection.close();
     console.log('✓ Database connection closed');

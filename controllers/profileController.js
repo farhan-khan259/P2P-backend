@@ -261,6 +261,66 @@ exports.updatePaymentDetails = async (req, res) => {
   }
 };
 
+// @desc    Update transaction password
+// @route   PUT /api/profile/transaction-password
+// @access  Private
+exports.updateTransactionPassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide current password and new password',
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password and confirm password do not match',
+      });
+    }
+
+    const user = await User.findById(req.user.id).select('+password +transactionPassword');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const hasTransactionPassword = Boolean(user.transactionPassword);
+    const isCurrentPasswordValid = hasTransactionPassword
+      ? await user.matchTransactionPassword(currentPassword)
+      : await user.matchPassword(currentPassword);
+
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: hasTransactionPassword
+          ? 'Current transaction password is incorrect'
+          : 'Current password is incorrect',
+      });
+    }
+
+    user.transactionPassword = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Transaction password updated successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error updating transaction password',
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Update nominee details
 // @route   PUT /api/profile/nominee-details
 // @access  Private
