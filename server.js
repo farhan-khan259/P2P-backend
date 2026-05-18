@@ -86,7 +86,7 @@ const startServer = async () => {
     });
 
     // Start server with automatic port fallback if the preferred port is busy.
-    const preferredPort = Number(process.env.PORT) || 5000;
+      const preferredPort = Number(process.env.PORT) || 5001;
     const maxPortRetries = 10;
 
     const startListening = (port, retriesLeft) => {
