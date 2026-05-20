@@ -14,6 +14,7 @@ const seedAdmin = require('./seed');
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const productRoutes = require('./routes/products');
+const membersRoutes = require('./routes/members');
 
 // Initialize Express app
 const app = express();
@@ -43,6 +44,7 @@ const startServer = async () => {
     // API Routes
     app.use('/api/auth', authRoutes);
     app.use('/api/profile', profileRoutes);
+    app.use('/api/members', membersRoutes);
     app.use('/api', productRoutes);
     // Dashboard routes
     const dashboardRoutes = require('./routes/dashboard');
@@ -65,6 +67,7 @@ const startServer = async () => {
         version: '1.0.0',
         endpoints: {
           auth: '/api/auth',
+          members: '/api/members',
           health: '/api/health',
         },
       });

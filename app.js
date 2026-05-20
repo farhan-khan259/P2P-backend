@@ -6,6 +6,7 @@ const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const dashboardRoutes = require('./routes/dashboard');
 const productRoutes = require('./routes/products');
+const membersRoutes = require('./routes/members');
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/members', membersRoutes);
 app.use('/api', productRoutes);
 
 // Health check

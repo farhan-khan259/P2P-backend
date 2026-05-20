@@ -97,6 +97,23 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    joiningLevel: {
+      type: Number,
+      default: 1,
+    },
+    unlockLevel: {
+      type: Number,
+      default: 1,
+    },
+    walletBalance: {
+      type: Number,
+      default: 0,
+    },
+    accountStatus: {
+      type: String,
+      enum: ['ACTIVE', 'IN-ACTIVE'],
+      default: 'ACTIVE',
+    },
     acceptedTerms: {
       type: Boolean,
       default: false,
@@ -155,6 +172,77 @@ const userSchema = new mongoose.Schema(
         type: String,
         trim: true,
       },
+    },
+    kycStatus: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'REJECTED'],
+      default: 'PENDING',
+    },
+    kycDetails: {
+      bankName: {
+        type: String,
+        trim: true,
+      },
+      bankBranch: {
+        type: String,
+        trim: true,
+      },
+      accountHolderName: {
+        type: String,
+        trim: true,
+      },
+      bankAccountNumber: {
+        type: String,
+        trim: true,
+      },
+      ifscCode: {
+        type: String,
+        trim: true,
+      },
+      googlePayNumber: {
+        type: String,
+        trim: true,
+      },
+      phonePeNumber: {
+        type: String,
+        trim: true,
+      },
+      paytmNumber: {
+        type: String,
+        trim: true,
+      },
+      upiId: {
+        type: String,
+        trim: true,
+      },
+      aadharCardNumber: {
+        type: String,
+        trim: true,
+      },
+      panNo: {
+        type: String,
+        trim: true,
+      },
+      aadharFrontImage: {
+        type: String,
+      },
+      aadharBackImage: {
+        type: String,
+      },
+    },
+    kycSubmittedAt: {
+      type: Date,
+    },
+    kycReviewedAt: {
+      type: Date,
+    },
+    kycReviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    kycRemarks: {
+      type: String,
+      trim: true,
     },
     nomineeDetails: {
       nomineeName: {

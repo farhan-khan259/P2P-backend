@@ -4,6 +4,7 @@ const {
   updateProfile,
   updateBankDetails,
   updatePaymentDetails,
+  updateKycRequest,
   updateNomineeDetails,
   updateTransactionPassword,
   changePassword,
@@ -26,6 +27,9 @@ router.put('/bank-details', updateBankDetails);
 
 // Update payment details
 router.put('/payment-details', updatePaymentDetails);
+
+// Submit/update KYC request
+router.put('/kyc-request', updateKycRequest);
 
 // Update transaction password
 router.put('/transaction-password', updateTransactionPassword);

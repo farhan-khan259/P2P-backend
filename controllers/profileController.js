@@ -37,6 +37,13 @@ exports.getProfile = async (req, res) => {
         createdAt: user.createdAt,
         bankDetails: user.bankDetails,
         paymentDetails: user.paymentDetails,
+        accountStatus: user.accountStatus,
+        joiningLevel: user.joiningLevel,
+        unlockLevel: user.unlockLevel,
+        walletBalance: user.walletBalance,
+        kycStatus: user.kycStatus,
+        kycDetails: user.kycDetails,
+        kycSubmittedAt: user.kycSubmittedAt,
         nomineeDetails: user.nomineeDetails,
       },
     });
@@ -256,6 +263,89 @@ exports.updatePaymentDetails = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating payment details',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Submit or update user KYC request
+// @route   PUT /api/profile/kyc-request
+// @access  Private
+exports.updateKycRequest = async (req, res) => {
+  try {
+    const {
+      bankName,
+      bankBranch,
+      accountHolderName,
+      bankAccountNumber,
+      ifscCode,
+      googlePayNumber,
+      phonePeNumber,
+      paytmNumber,
+      upiId,
+      aadharCardNumber,
+      panNo,
+      aadharFrontImage,
+      aadharBackImage,
+    } = req.body;
+
+    const currentUser = await User.findById(req.user.id);
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        panNo: panNo || currentUser.panNo,
+        aadharNo: aadharCardNumber || currentUser.aadharNo,
+        bankDetails: {
+          bankName,
+          bankBranch,
+          holderName: accountHolderName,
+          accountNo: bankAccountNumber,
+          ifsc: ifscCode,
+          panNo: panNo || currentUser.panNo,
+        },
+        paymentDetails: {
+          googlePay: googlePayNumber,
+          phonePe: phonePeNumber,
+          payTm: paytmNumber,
+          upiId,
+        },
+        kycStatus: 'PENDING',
+        kycSubmittedAt: new Date(),
+        kycDetails: {
+          bankName,
+          bankBranch,
+          accountHolderName,
+          bankAccountNumber,
+          ifscCode,
+          googlePayNumber,
+          phonePeNumber,
+          paytmNumber,
+          upiId,
+          aadharCardNumber,
+          panNo: panNo || currentUser.panNo,
+          aadharFrontImage,
+          aadharBackImage,
+        },
+      },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'KYC request submitted successfully',
+      data: user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error submitting KYC request',
       error: error.message,
     });
   }
