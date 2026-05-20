@@ -7,6 +7,8 @@ const profileRoutes = require('./routes/profile');
 const dashboardRoutes = require('./routes/dashboard');
 const productRoutes = require('./routes/products');
 const membersRoutes = require('./routes/members');
+const withdrawalsRoutes = require('./routes/withdrawals');
+const depositsRoutes = require('./routes/deposits');
 
 const app = express();
 
@@ -19,6 +21,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/members', membersRoutes);
+app.use('/api/withdrawals', withdrawalsRoutes);
+app.use('/api/deposits', depositsRoutes);
 app.use('/api', productRoutes);
 
 // Health check

@@ -15,6 +15,8 @@ const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const productRoutes = require('./routes/products');
 const membersRoutes = require('./routes/members');
+const withdrawalsRoutes = require('./routes/withdrawals');
+const depositsRoutes = require('./routes/deposits');
 
 // Initialize Express app
 const app = express();
@@ -45,6 +47,8 @@ const startServer = async () => {
     app.use('/api/auth', authRoutes);
     app.use('/api/profile', profileRoutes);
     app.use('/api/members', membersRoutes);
+    app.use('/api/withdrawals', withdrawalsRoutes);
+    app.use('/api/deposits', depositsRoutes);
     app.use('/api', productRoutes);
     // Dashboard routes
     const dashboardRoutes = require('./routes/dashboard');
@@ -68,6 +72,8 @@ const startServer = async () => {
         endpoints: {
           auth: '/api/auth',
           members: '/api/members',
+          withdrawals: '/api/withdrawals',
+          deposits: '/api/deposits',
           health: '/api/health',
         },
       });

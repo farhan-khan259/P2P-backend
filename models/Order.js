@@ -89,6 +89,11 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: 'Pending',
     },
+    remark: {
+      type: String,
+      default: '-',
+      trim: true,
+    },
     orderItems: {
       type: Number,
       default: 0,
