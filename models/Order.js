@@ -102,6 +102,22 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    lvPoint: {
+      type: Number,
+      default: 0,
+    },
+    bvPoint: {
+      type: Number,
+      default: 0,
+    },
+    startDate: {
+      type: String,
+      default: '',
+    },
+    endDate: {
+      type: String,
+      default: '',
+    },
     shippingCharge: {
       type: Number,
       default: 0,

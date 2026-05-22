@@ -441,6 +441,8 @@ exports.checkoutCart = async (req, res) => {
     const shippingCharge = Number(req.body.shippingCharge || 0);
     const discountCoupon = Number(req.body.discountCoupon || 0);
     const finalTotal = totalPrice + shippingCharge - discountCoupon;
+    const bvPoint = cart.items.reduce((sum, item) => sum + Number(item.bvPoint || 0), 0);
+    const lvPoint = cart.items.reduce((sum, item) => sum + Number(item.levelPoint || 0), 0);
 
     const order = await Order.create({
       userId: req.user.id,
@@ -452,6 +454,10 @@ exports.checkoutCart = async (req, res) => {
       orderStatus: 'Pending',
       orderItems: cart.items.length,
       totalPrice,
+      lvPoint,
+      bvPoint,
+      startDate: orderDate,
+      endDate: orderDate,
       shippingCharge,
       discountCoupon,
       finalTotal,
@@ -486,11 +492,16 @@ exports.getOrders = async (req, res) => {
         id: order._id,
         orderNo: order.orderNo,
         orderDate: order.orderDate,
+        memberId: req.user.memberId || req.user.epin || String(req.user.id),
         items: `${order.orderItems} ITEMS`,
         totalPaid: order.finalTotal,
         payMode: order.paymentMode,
         payStatus: order.paymentStatus,
         orderStatus: order.orderStatus,
+        lvPoint: Number(order.lvPoint || 0),
+        bvPoint: Number(order.bvPoint || 0),
+        startDate: order.startDate || order.orderDate,
+        endDate: order.endDate || order.orderDate,
       })),
     });
   } catch (error) {
@@ -500,7 +511,7 @@ exports.getOrders = async (req, res) => {
 
 exports.getOrderByNo = async (req, res) => {
   try {
-    const order = await Order.findOne({ orderNo: req.params.orderNo });
+    const order = await Order.findOne({ orderNo: req.params.orderNo }).populate('userId', 'memberId name contactNo');
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
@@ -515,11 +526,16 @@ exports.getOrderByNo = async (req, res) => {
       order: {
         orderNo: order.orderNo,
         orderDate: order.orderDate,
+        memberId: order.userId?.memberId || String(order.userId?._id || ''),
         paymentMode: order.paymentMode,
         orderItems: order.orderItems,
         orderStatus: order.orderStatus,
         paymentStatus: order.paymentStatus,
         totalPrice: order.totalPrice,
+        lvPoint: Number(order.lvPoint || 0),
+        bvPoint: Number(order.bvPoint || 0),
+        startDate: order.startDate || order.orderDate,
+        endDate: order.endDate || order.orderDate,
         shippingCharge: order.shippingCharge,
         discountCoupon: order.discountCoupon,
         finalTotal: order.finalTotal,
@@ -540,19 +556,25 @@ exports.getOrderByNo = async (req, res) => {
 
 exports.getAdminOrders = async (req, res) => {
   try {
-    const orders = await Order.find().sort({ createdAt: -1 });
+    const orders = await Order.find().populate('userId', 'memberId name contactNo').sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
-      orders: orders.map((order) => ({
+      orders: orders.map((order, index) => ({
+        sNo: index + 1,
         id: order._id,
         orderNo: order.orderNo,
+        memberId: order.userId?.memberId || String(order.userId?._id || ''),
         orderDate: order.orderDate,
         items: `${order.orderItems} ITEMS`,
         totalPaid: order.finalTotal,
         payMode: order.paymentMode,
         payStatus: order.paymentStatus,
         orderStatus: order.orderStatus,
+        lvPoint: Number(order.lvPoint || 0),
+        bvPoint: Number(order.bvPoint || 0),
+        startDate: order.startDate || order.orderDate,
+        endDate: order.endDate || order.orderDate,
       })),
     });
   } catch (error) {
