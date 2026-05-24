@@ -11,6 +11,7 @@ const {
   getTransferHistory,
   getFranchises,
   createOrUpdateFranchise,
+  deleteFranchise,
 } = require('../controllers/epinsController');
 
 const router = express.Router();
@@ -30,5 +31,6 @@ router.get('/transfers', getTransferHistory);
 router.get('/franchises', getFranchises);
 router.post('/franchises', authorize('admin'), createOrUpdateFranchise);
 router.put('/franchises/:franchiseId', authorize('admin'), createOrUpdateFranchise);
+router.delete('/franchises/:franchiseId', authorize('admin'), deleteFranchise);
 
 module.exports = router;

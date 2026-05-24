@@ -7,7 +7,7 @@ const formatDateTime = (value) => new Date(value).toLocaleString('en-IN', {
   day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
 });
 
-const buildTransactionRows = async (scope, memberId) => {
+const buildTransactionRows = async (scope, memberIdentifiers = []) => {
   const rows = [];
 
   const orders = await Order.find().sort({ createdAt: -1 });
@@ -58,8 +58,8 @@ const buildTransactionRows = async (scope, memberId) => {
     });
   });
 
-  if (scope === 'user' && memberId) {
-    return rows.filter((row) => row.memberId === memberId || row.transactionId === memberId);
+  if (scope === 'user' && memberIdentifiers.length) {
+    return rows.filter((row) => memberIdentifiers.includes(row.memberId) || memberIdentifiers.includes(row.transactionId));
   }
 
   return rows;
@@ -67,9 +67,12 @@ const buildTransactionRows = async (scope, memberId) => {
 
 exports.getTransactionHistory = async (req, res) => {
   try {
-    const scope = String(req.query.scope || 'admin').toLowerCase();
-    const memberId = String(req.query.memberId || req.user?.memberId || req.user?.epin || '').trim();
-    const rows = await buildTransactionRows(scope, memberId);
+    const requestedScope = String(req.query.scope || 'admin').toLowerCase();
+    const scope = req.user?.role === 'admin' ? requestedScope : 'user';
+    const memberIdentifiers = [req.query.memberId, req.user?.memberId, req.user?.epin, req.user?.id]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean);
+    const rows = await buildTransactionRows(scope, memberIdentifiers);
     let runningBalance = 0;
     const mappedRows = rows.map((row, index) => {
       runningBalance += Number(row.credit || 0) - Number(row.debit || 0);

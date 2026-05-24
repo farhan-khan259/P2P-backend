@@ -1,14 +1,15 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Epin = require('../models/Epin');
 const EpinRequest = require('../models/EpinRequest');
 const EpinTransfer = require('../models/EpinTransfer');
 const EpinFranchise = require('../models/EpinFranchise');
 
-const seedRequests = [
-  { clientId: 'DT781347', name: 'REKHA DEVI', packageCost: 'Activation-10.00', qty: 100, paidAmount: 999999.99, mobile: '7004681263', status: 'Approved' },
-  { clientId: 'DT944734', name: 'SEEMA', packageCost: 'Activation-10.00', qty: 100, paidAmount: 100.0, mobile: '9931330387', status: 'Approved' },
-  { clientId: 'DT101010', name: 'AASHA ASHIYANA ATITHI SEVA HRIDAY AASHRAM', packageCost: 'Activation-10.00', qty: 2, paidAmount: 20.0, mobile: '9229510609', status: 'Approved' },
-];
+const getUserIdentifiers = (req) => [req.user?.memberId, req.user?.epin, req.user?.id]
+  .map((value) => String(value || '').trim())
+  .filter(Boolean);
+
+const isAdmin = (req) => req.user?.role === 'admin';
 
 const seedEpins = [
   { epinName: 'Activation', epinNo: 'EPR1832459', cost: 10, generatedBy: 'DT101010', currentOwner: 'DT101010', status: 'Unused', usedBy: '-', usedDate: '-', deletedBy: '-', deletedDate: '-', deletedReason: '-' },
@@ -41,10 +42,20 @@ const formatDate = (date = new Date()) => new Date(date).toLocaleString('en-IN',
 });
 
 const ensureSeed = async () => {
-  if ((await EpinRequest.countDocuments()) === 0) await EpinRequest.insertMany(seedRequests);
   if ((await Epin.countDocuments()) === 0) await Epin.insertMany(seedEpins);
   if ((await EpinTransfer.countDocuments()) === 0) await EpinTransfer.insertMany(seedTransfers);
   if ((await EpinFranchise.countDocuments()) === 0) await EpinFranchise.insertMany(seedFranchises);
+};
+
+const cleanupDemoRequests = async () => {
+  await EpinRequest.deleteMany({
+    $or: [
+      { clientId: 'DT781347', name: 'REKHA DEVI' },
+      { clientId: 'DT944734', name: 'SEEMA' },
+      { clientId: 'DT101010', name: 'AASHA ASHIYANA ATITHI SEVA HRIDAY AASHRAM' },
+      { clientId: '23323', name: 'Muhammad Farhan', packageCost: 'basic', qty: 2, paidAmount: 200, mobile: '3333333333' },
+    ],
+  });
 };
 
 const mapEpin = (doc, index) => ({
@@ -61,6 +72,7 @@ const mapEpin = (doc, index) => ({
 });
 
 const mapRequest = (doc, index) => ({
+  _id: String(doc._id),
   id: index + 1,
   clientId: doc.clientId,
   name: doc.name,
@@ -75,6 +87,10 @@ const mapRequest = (doc, index) => ({
 exports.getEpinRequests = async (req, res) => {
   try {
     await ensureSeed();
+    await cleanupDemoRequests();
+    if (!isAdmin(req)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to access ePin requests' });
+    }
     const { status } = req.query;
     const filter = {};
     if (status) filter.status = status;
@@ -106,7 +122,12 @@ exports.createEpinRequest = async (req, res) => {
 
 exports.updateEpinRequestStatus = async (req, res) => {
   try {
-    const request = await EpinRequest.findById(req.params.requestId);
+    const { requestId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({ success: false, message: 'Invalid request id' });
+    }
+
+    const request = await EpinRequest.findById(requestId);
     if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
     request.status = req.body.status || request.status;
     await request.save();
@@ -122,9 +143,22 @@ exports.getEpins = async (req, res) => {
     const { status, generatedBy, currentOwner, epin } = req.query;
     const filter = {};
     if (status) filter.status = status;
-    if (generatedBy) filter.generatedBy = generatedBy;
-    if (currentOwner) filter.currentOwner = currentOwner;
     if (epin) filter.epinNo = new RegExp(epin, 'i');
+    if (isAdmin(req)) {
+      if (generatedBy) filter.generatedBy = generatedBy;
+      if (currentOwner) filter.currentOwner = currentOwner;
+    } else {
+      const identifiers = getUserIdentifiers(req);
+      if (!identifiers.length) {
+        return res.status(403).json({ success: false, message: 'Not authorized to view ePins' });
+      }
+      filter.$or = [
+        { generatedBy: { $in: identifiers } },
+        { currentOwner: { $in: identifiers } },
+        { usedBy: { $in: identifiers } },
+        { deletedBy: { $in: identifiers } },
+      ];
+    }
     const rows = await Epin.find(filter).sort({ createdAt: -1 });
     res.json({ success: true, epins: rows.map(mapEpin) });
   } catch (error) {
@@ -136,8 +170,14 @@ exports.generateEpins = async (req, res) => {
   try {
     const qty = Math.max(1, Number(req.body.qty || req.body.numberOfEpins || 1));
     const epinName = String(req.body.epinName || 'Activation').trim();
-    const generatedBy = String(req.body.generatedBy || req.user?.memberId || req.user?.epin || 'ADMIN').trim();
-    const currentOwner = String(req.body.currentOwner || generatedBy).trim();
+    const identifiers = getUserIdentifiers(req);
+    if (!isAdmin(req) && !identifiers.length) {
+      return res.status(403).json({ success: false, message: 'Not authorized to generate ePins' });
+    }
+    const generatedBy = isAdmin(req)
+      ? String(req.body.generatedBy || req.user?.memberId || req.user?.epin || 'ADMIN').trim()
+      : identifiers[0];
+    const currentOwner = String((isAdmin(req) ? req.body.currentOwner : undefined) || generatedBy).trim();
     const cost = Number(req.body.cost || 10);
 
     const created = [];
@@ -162,6 +202,9 @@ exports.generateEpins = async (req, res) => {
 
 exports.updateEpinStatus = async (req, res) => {
   try {
+    if (!isAdmin(req)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to update ePin status' });
+    }
     const epin = await Epin.findOne({ epinNo: req.params.epinNo });
     if (!epin) return res.status(404).json({ success: false, message: 'ePin not found' });
     const status = String(req.body.status || '').trim();
@@ -186,10 +229,18 @@ exports.transferEpin = async (req, res) => {
   try {
     const epin = await Epin.findOne({ epinNo: req.params.epinNo });
     if (!epin) return res.status(404).json({ success: false, message: 'ePin not found' });
+    const identifiers = getUserIdentifiers(req);
+    if (!isAdmin(req) && !identifiers.includes(epin.currentOwner)) {
+      return res.status(403).json({ success: false, message: 'You can only transfer your own ePins' });
+    }
+    const toMember = String(req.body.toMember || '').trim();
+    if (!toMember) {
+      return res.status(400).json({ success: false, message: 'toMember is required' });
+    }
     const transfer = await EpinTransfer.create({
       epinNo: epin.epinNo,
-      fromMember: String(req.body.fromMember || epin.currentOwner).trim(),
-      toMember: String(req.body.toMember || '').trim(),
+      fromMember: String(isAdmin(req) ? req.body.fromMember || epin.currentOwner : epin.currentOwner).trim(),
+      toMember,
       amount: Number(req.body.amount || epin.cost || 0),
       status: String(req.body.status || 'Success').trim(),
     });
@@ -206,7 +257,21 @@ exports.getTransferHistory = async (req, res) => {
   try {
     await ensureSeed();
     const transfers = await EpinTransfer.find().sort({ createdAt: -1 });
-    res.json({ success: true, transfers: transfers.map((doc, index) => ({ id: index + 1, epin: doc.epinNo, fromMember: doc.fromMember, toMember: doc.toMember, transferDate: formatDate(doc.createdAt), amount: Number(doc.amount).toFixed(2), status: doc.status })) });
+    if (isAdmin(req)) {
+      res.json({ success: true, transfers: transfers.map((doc, index) => ({ id: index + 1, epin: doc.epinNo, fromMember: doc.fromMember, toMember: doc.toMember, transferDate: formatDate(doc.createdAt), amount: Number(doc.amount).toFixed(2), status: doc.status })) });
+      return;
+    }
+
+    const identifiers = getUserIdentifiers(req);
+    if (!identifiers.length) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view transfer history' });
+    }
+
+    const rows = transfers
+      .filter((doc) => identifiers.includes(doc.fromMember) || identifiers.includes(doc.toMember))
+      .map((doc, index) => ({ id: index + 1, epin: doc.epinNo, fromMember: doc.fromMember, toMember: doc.toMember, transferDate: formatDate(doc.createdAt), amount: Number(doc.amount).toFixed(2), status: doc.status }));
+
+    res.json({ success: true, transfers: rows });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -215,7 +280,8 @@ exports.getTransferHistory = async (req, res) => {
 exports.getFranchises = async (req, res) => {
   try {
     await ensureSeed();
-    const rows = await EpinFranchise.find().sort({ createdAt: -1 });
+    const filter = isAdmin(req) ? {} : { status: 'SHOWING' };
+    const rows = await EpinFranchise.find(filter).sort({ createdAt: -1 });
     res.json({ success: true, franchises: rows.map((doc, index) => ({ id: index + 1, franchiseId: doc.franchiseId, name: doc.franchiseName, upi: doc.upiId, whatsapp: doc.whatsappNo, city: doc.city, stock: doc.stock, status: doc.status })) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -240,6 +306,33 @@ exports.createOrUpdateFranchise = async (req, res) => {
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
     res.status(201).json({ success: true, franchise: { franchiseId: franchise.franchiseId, name: franchise.franchiseName, upi: franchise.upiId, whatsapp: franchise.whatsappNo, city: franchise.city, stock: franchise.stock, status: franchise.status } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.deleteFranchise = async (req, res) => {
+  try {
+    const franchise = await EpinFranchise.findOne({ franchiseId: req.params.franchiseId });
+    if (!franchise) {
+      return res.status(404).json({ success: false, message: 'Franchise not found' });
+    }
+
+    franchise.status = 'HIDDEN';
+    await franchise.save();
+
+    res.json({
+      success: true,
+      franchise: {
+        franchiseId: franchise.franchiseId,
+        name: franchise.franchiseName,
+        upi: franchise.upiId,
+        whatsapp: franchise.whatsappNo,
+        city: franchise.city,
+        stock: franchise.stock,
+        status: franchise.status,
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
