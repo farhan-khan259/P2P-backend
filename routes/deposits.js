@@ -1,15 +1,21 @@
 const express = require('express');
 const { protect, authorize } = require('../middleware/auth');
 const {
+  createDepositRequest,
   getDepositRequests,
+  getMyDepositRequests,
+  getDepositSummary,
   updateDepositStatus,
 } = require('../controllers/depositsController');
 
 const router = express.Router();
 
-router.use(protect, authorize('admin'));
+router.use(protect);
 
-router.get('/', getDepositRequests);
-router.patch('/:orderNo/status', updateDepositStatus);
+router.post('/', createDepositRequest);
+router.get('/me', getMyDepositRequests);
+router.get('/summary', getDepositSummary);
+router.get('/', authorize('admin'), getDepositRequests);
+router.patch('/:orderNo/status', authorize('admin'), updateDepositStatus);
 
 module.exports = router;

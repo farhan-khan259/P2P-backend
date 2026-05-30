@@ -211,15 +211,20 @@ exports.loginUser = async (req, res) => {
       });
     }
 
-    const { email, password } = req.body;
+    const { email, memberId, password } = req.body;
 
-    // Find user and include password field (normally excluded)
-    const user = await User.findOne({ email }).select('+password');
+    // Find user by email or memberId (memberId preferred if provided)
+    let user = null;
+    if (memberId && String(memberId).trim() !== '') {
+      user = await User.findOne({ memberId: String(memberId).toUpperCase() }).select('+password');
+    } else if (email) {
+      user = await User.findOne({ email }).select('+password');
+    }
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password',
+        message: 'Invalid credentials',
       });
     }
 
@@ -229,7 +234,7 @@ exports.loginUser = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password',
+        message: 'Invalid credentials',
       });
     }
 
