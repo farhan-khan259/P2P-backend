@@ -211,10 +211,17 @@ exports.loginUser = async (req, res) => {
       });
     }
 
-    const { memberId, password } = req.body;
+    const { memberId, email, password } = req.body;
 
-    const normalizedMemberId = String(memberId || '').trim().toUpperCase();
-    const user = await User.findOne({ memberId: normalizedMemberId }).select('+password');
+    const query = {};
+
+    if (memberId) {
+      query.memberId = String(memberId).trim().toUpperCase();
+    } else if (email) {
+      query.email = String(email).trim().toLowerCase();
+    }
+
+    const user = await User.findOne(query).select('+password');
 
     if (!user) {
       return res.status(401).json({
