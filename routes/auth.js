@@ -2,7 +2,7 @@
 
 const express = require('express');
 const { body, validationRules } = require('express-validator');
-const { registerUser, loginUser, getMe, getSponsorDetails } = require('../controllers/authController');
+const { registerUser, loginUser, loginAsUser, getMe, getSponsorDetails } = require('../controllers/authController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -30,10 +30,18 @@ router.post(
 router.post(
   '/login',
   [
-    body('email', 'Please provide a valid email').isEmail().normalizeEmail(),
+    body('memberId', 'Member ID is required').trim().notEmpty(),
     body('password', 'Password is required').notEmpty(),
   ],
   loginUser
+);
+
+router.post(
+  '/admin-login-user',
+  protect,
+  authorize('admin'),
+  [body('memberId', 'Member ID is required').trim().notEmpty()],
+  loginAsUser
 );
 
 /**

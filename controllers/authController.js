@@ -211,15 +211,10 @@ exports.loginUser = async (req, res) => {
       });
     }
 
-    const { email, memberId, password } = req.body;
+    const { memberId, password } = req.body;
 
-    // Find user by email or memberId (memberId preferred if provided)
-    let user = null;
-    if (memberId && String(memberId).trim() !== '') {
-      user = await User.findOne({ memberId: String(memberId).toUpperCase() }).select('+password');
-    } else if (email) {
-      user = await User.findOne({ email }).select('+password');
-    }
+    const normalizedMemberId = String(memberId || '').trim().toUpperCase();
+    const user = await User.findOne({ memberId: normalizedMemberId }).select('+password');
 
     if (!user) {
       return res.status(401).json({
@@ -271,6 +266,68 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error during login',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Login as an existing user using admin impersonation
+ * POST /api/auth/admin-login-user
+ */
+exports.loginAsUser = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array(),
+      });
+    }
+
+    const { memberId } = req.body;
+    const user = await User.findOne({ memberId: String(memberId).toUpperCase(), role: 'user' });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Member not found',
+      });
+    }
+
+    const token = generateToken(user._id, user.role);
+
+    res.status(200).json({
+      success: true,
+      message: 'Admin logged in as user successfully',
+      token,
+      user: {
+        id: user._id,
+        memberId: user.memberId,
+        sponsorId: user.sponsorId,
+        sponsorName: user.sponsorName,
+        name: user.name,
+        contactNo: user.contactNo,
+        dateOfBirth: user.dateOfBirth,
+        email: user.email,
+        aadharNo: user.aadharNo,
+        address: user.address,
+        country: user.country,
+        state: user.state,
+        district: user.district,
+        city: user.city,
+        pincode: user.pincode,
+        joiningPackage: user.joiningPackage,
+        epin: user.epin,
+        acceptedTerms: user.acceptedTerms,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error during admin impersonation login',
       error: error.message,
     });
   }
