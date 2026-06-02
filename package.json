@@ -4,8 +4,8 @@
   "description": "MLM P2P Investment Backend with Node.js, Express, and MongoDB",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node api.js && node server.js",
+    "dev": "node api.js && nodemon server.js",
     "seed": "node seed.js",
     "test": "jest --runInBand"
   },
@@ -29,15 +29,11 @@
     "express-validator": "^7.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
-  }
-  ,
-  "jest": {
-    "testEnvironment": "node"
-  },
-  "devDependencies": {
     "nodemon": "^3.0.1",
     "jest": "^29.6.1",
     "supertest": "^6.4.4"
+  },
+  "jest": {
+    "testEnvironment": "node"
   }
 }
